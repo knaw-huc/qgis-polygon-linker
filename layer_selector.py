@@ -30,6 +30,8 @@ from .resources import *
 # Import the code for the dialog
 from .layer_selector_dialog import LayerSelectorDialog
 import os.path
+from qgis.core import QgsProject, QgsVectorLayer
+from qgis.core import Qgis
 
 
 class LayerSelector:
@@ -188,6 +190,37 @@ class LayerSelector:
         if self.first_start == True:
             self.first_start = False
             self.dlg = LayerSelectorDialog()
+        
+        # If no project is loaded => ERROR
+        if QgsProject.baseName(QgsProject.instance()) == '':
+            self.iface.messageBar().pushMessage("Error", "No project loaded", level=Qgis.Critical, duration=3)
+            return
+            
+        #layers = QgsProject.instance().layerTreeRoot().children()
+        layers = QgsProject.instance().mapLayers()
+        
+        # Check if there are any layers
+        if len(layers) == 0:
+            self.iface.messageBar().pushMessage("Error", "Project contains no layers", level=Qgis.Critical, duration=3)
+            return
+        
+        # Select only the vector layers
+        geoLayers = []
+        dataLayers = []
+        for id, layer in layers.items():
+            current = QgsProject.instance().mapLayer(id)
+            if isinstance(current, QgsVectorLayer):
+                if current.dataProvider().storageType() == "Delimited text file":
+                    dataLayers.append(layer)
+                else: 
+                    geoLayers.append(layer)
+        
+            
+        self.dlg.comboBox.clear();
+        self.dlg.comboBox.addItems([layer.name() for layer in geoLayers])
+        
+        self.dlg.comboBox_2.clear();
+        self.dlg.comboBox_2.addItems([layer.name() for layer in dataLayers])
 
         # show the dialog
         self.dlg.show()
@@ -197,4 +230,4 @@ class LayerSelector:
         if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
-            pass
+           pass 
