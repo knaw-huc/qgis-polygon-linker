@@ -32,6 +32,7 @@ from .layer_selector_dialog import LayerSelectorDialog
 import os.path
 from qgis.core import QgsProject, QgsVectorLayer
 from qgis.core import Qgis
+from cryptography.x509.oid import ExtendedKeyUsageOID
 
 
 class LayerSelector:
@@ -206,14 +207,27 @@ class LayerSelector:
         
         # Select only the vector layers
         geoLayers = []
+        geoIDs = []
         dataLayers = []
+        dataIDs = []
+        
         for id, layer in layers.items():
             current = QgsProject.instance().mapLayer(id)
             if isinstance(current, QgsVectorLayer):
                 if current.dataProvider().storageType() == "Delimited text file":
                     dataLayers.append(layer)
+                    dataIDs.append(id)
                 else: 
                     geoLayers.append(layer)
+                    geoIDs.append(id)
+        
+        if len(geoLayers) == 0:
+            self.iface.messageBar().pushMessage("Error", "Project contains no geometry layers", level=Qgis.Critical, duration=3)
+            return
+        
+        if len(dataLayers) == 0:
+            self.iface.messageBar().pushMessage("Error", "Project contains no data layers", level=Qgis.Critical, duration=3)
+            return
         
             
         self.dlg.comboBox.clear();
