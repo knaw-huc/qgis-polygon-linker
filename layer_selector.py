@@ -21,18 +21,18 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
+import uuid
 
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
 from .layer_selector_dialog import LayerSelectorDialog
 import os.path
-from qgis.core import QgsProject, QgsVectorLayer
+from qgis.core import QgsProject, QgsVectorLayer, QgsField, QgsFields, QgsFeature, QgsVectorDataProvider
 from qgis.core import Qgis
-from cryptography.x509.oid import ExtendedKeyUsageOID
 
 
 class LayerSelector:
@@ -207,19 +207,19 @@ class LayerSelector:
         
         # Select only the vector layers
         geoLayers = []
-        geoIDs = []
+        self.geoIDs = []
         dataLayers = []
-        dataIDs = []
+        self.dataIDs = []
         
         for id, layer in layers.items():
             current = QgsProject.instance().mapLayer(id)
             if isinstance(current, QgsVectorLayer):
                 if current.dataProvider().storageType() == "Delimited text file":
                     dataLayers.append(layer)
-                    dataIDs.append(id)
+                    self.dataIDs.append(id)
                 else: 
                     geoLayers.append(layer)
-                    geoIDs.append(id)
+                    self.geoIDs.append(id)
         
         if len(geoLayers) == 0:
             self.iface.messageBar().pushMessage("Error", "Project contains no geometry layers", level=Qgis.Critical, duration=3)
@@ -242,6 +242,55 @@ class LayerSelector:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
-           pass 
+            self.dataLayer = self.dataIDs[self.dlg.comboBox_2.currentIndex()]
+            self.geoLayer = self.geoIDs[self.dlg.comboBox.currentIndex()]
+            self.store_layer_info()
+            self.create_uuid_columns()
+            
+            
+    def create_uuid_columns(self):
+        layerID = self.dataLayer
+        self.current = QgsProject.instance().mapLayer(layerID)
+        if self.contains_uuid_column(self.current) == True:
+            self.iface.messageBar().pushMessage("Done", "Layer already contains UUID field", level=Qgis.Info, duration=2)
+        else:
+            field = QgsField("UUID", QVariant.String)
+            self.current.addExpressionField( '', field)
+        
+        layerID = self.geoLayer
+        self.current = QgsProject.instance().mapLayer(layerID)
+        if self.contains_uuid_column(self.current) == True:
+            self.iface.messageBar().pushMessage("Done", "Layer already contains UUID field", level=Qgis.Info, duration=2)
+        else:
+           self.addFieldToShapeFile()
+      
+    def contains_uuid_column(self, layer):
+        for i, column in enumerate(layer.fields()):
+            if column.name() == "UUID":
+                return True
+        return False
+           
+        
+    def addFieldToShapeFile(self):
+        self.current.startEditing()
+        self.current.dataProvider().addAttributes([QgsField("UUID", QVariant.String)])
+        self.current.updateFields()
+        self.current.commitChanges()
+        
+        column = self.current.fields().indexFromName("UUID")
+        
+        it = self.current.getFeatures()
+
+        self.current.startEditing()
+        for feat in it:
+            id = uuid.uuid1()
+            self.current.changeAttributeValue(feat.id(), column, str(id))
+        self.current.commitChanges()
+                
+    def store_layer_info(self):
+        """Store the selected layer references into the project custom info """
+        proj = QgsProject.instance()
+        proj.writeEntry("_polyLink", "data_layer_id", self.dataLayer)
+        proj.writeEntry("_polyLink", "geo_layer_id", self.geoLayer)
+        
+        self.iface.messageBar().pushMessage("Done", "Layers " + self.geoLayer + " and " + self.dataLayer + " saved", level=Qgis.Info, duration=3)
