@@ -249,13 +249,13 @@ class LayerSelector:
             
             
     def create_uuid_columns(self):
-        layerID = self.dataLayer
-        self.current = QgsProject.instance().mapLayer(layerID)
-        if self.contains_uuid_column(self.current) == True:
-            self.iface.messageBar().pushMessage("Done", "Layer already contains UUID field", level=Qgis.Info, duration=2)
-        else:
-            field = QgsField("UUID", QVariant.String)
-            self.current.addExpressionField( '', field)
+#         layerID = self.dataLayer
+#         self.current = QgsProject.instance().mapLayer(layerID)
+#         if self.contains_uuid_column(self.current) == True:
+#             self.iface.messageBar().pushMessage("Done", "Layer already contains UUID field", level=Qgis.Info, duration=2)
+#         else:
+#             field = QgsField("UUID", QVariant.String)
+#             self.current.addExpressionField( '', field)
         
         layerID = self.geoLayer
         self.current = QgsProject.instance().mapLayer(layerID)
@@ -277,20 +277,21 @@ class LayerSelector:
         self.current.updateFields()
         self.current.commitChanges()
         
-        column = self.current.fields().indexFromName("UUID")
-        
-        it = self.current.getFeatures()
-
-        self.current.startEditing()
-        for feat in it:
-            id = uuid.uuid1()
-            self.current.changeAttributeValue(feat.id(), column, str(id))
-        self.current.commitChanges()
+#         column = self.current.fields().indexFromName("UUID")
+#         
+#         it = self.current.getFeatures()
+# 
+#         self.current.startEditing()
+#         for feat in it:
+#             id = uuid.uuid1()
+#             self.current.changeAttributeValue(feat.id(), column, str(id))
+#         self.current.commitChanges()
                 
     def store_layer_info(self):
         """Store the selected layer references into the project custom info """
         proj = QgsProject.instance()
         proj.writeEntry("_polyLink", "data_layer_id", self.dataLayer)
         proj.writeEntry("_polyLink", "geo_layer_id", self.geoLayer)
+        proj.writeEntry("_polylink", "fieldsSet", "no")
         
         self.iface.messageBar().pushMessage("Done", "Layers " + self.geoLayer + " and " + self.dataLayer + " saved", level=Qgis.Info, duration=3)
