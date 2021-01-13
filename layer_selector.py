@@ -292,6 +292,6 @@ class LayerSelector:
         proj = QgsProject.instance()
         proj.writeEntry("_polyLink", "data_layer_id", self.dataLayer)
         proj.writeEntry("_polyLink", "geo_layer_id", self.geoLayer)
-        proj.writeEntry("_polylink", "fieldsSet", "no")
+        proj.writeEntry("_polyLink", "fieldsSet", "no")
         
         self.iface.messageBar().pushMessage("Done", "Layers " + self.geoLayer + " and " + self.dataLayer + " saved", level=Qgis.Info, duration=3)
